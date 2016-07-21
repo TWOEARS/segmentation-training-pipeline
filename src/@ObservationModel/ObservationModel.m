@@ -95,12 +95,30 @@ classdef ObservationModel
             % used for training. Parameter-depended files will be
             % associated with a unique hash-identifier and stored in
             % dedicated subfolders named as the hash-value.
-            featureHash = DataHash( obj.trainingParameters.simulator, ...
-                obj.trainingParameters.features );
             obj.signalPath = fullfile( obj.basePath, 'train_signals' );
+            
+            featureHash = DataHash( {obj.trainingParameters.simulator, ...
+                obj.trainingParameters.features} );
             obj.featurePath = fullfile( obj.basePath, 'train_features', ...
                 featureHash);
-            obj.modelPath = fullfile( obj.basePath, 'models', featureHash);
+            
+            modelHash = DataHash( {obj.trainingParameters.simulator, ...
+                obj.trainingParameters.features, ...
+                obj.trainingParameters.models} );
+            obj.modelPath = fullfile( obj.basePath, [modelHash, '.mat'] );
+            
+            % Check if model matching the parameter settings has already 
+            % been trained. If not, the training process is initiated
+            % automatically. If a trained model is available, an instance
+            % of this class will automatically created using the trained
+            % model parameters.
+            if exist( obj.modelPath, 'file' )
+                file = load( obj.modelPath );
+                
+                % TODO: Read parameters here.
+            else
+                obj.train();
+            end
         end
         
         function train( obj )
