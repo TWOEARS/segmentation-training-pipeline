@@ -59,4 +59,6 @@ for channelIdx = 1 : numChannels
     modelParameters( channelIdx ).logLikelihood = logLikelihood;
 end
 
+display.sectionFooter();
+
 end
