@@ -72,7 +72,7 @@ numLoops = length( obj.trainingParameters.simulator.impulse_responses ) * ...
 loopCounter = 1;
 
 % Initialize the progress bar.
-display.progressBar( true, 'Rendering signals' );
+display.progressBar( true, 'Rendering signals...' );
 
 % Generate binaural signals using white noise stimuli for all specified
 % impulse responses. If corresponding signals have already been generated,
@@ -113,7 +113,7 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
         fileName = obj.getDataFileName( irName, azimuth );
         
         % Update progress bar.
-        display.progressBar( false, 'Rendering signals', loopCounter, numLoops );
+        display.progressBar( false, 'Rendering signals...', loopCounter, numLoops );
         loopCounter = loopCounter + 1;
         
         if ~exist( fullfile(obj.signalPath, fileName), 'file' )

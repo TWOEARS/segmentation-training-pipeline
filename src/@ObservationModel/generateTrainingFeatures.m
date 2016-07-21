@@ -63,7 +63,7 @@ end
 loopCounter = 1;
 
 % Initialize the progress bar.
-display.progressBar( true, 'Extracting features' );
+display.progressBar( true, 'Extracting features...' );
 
 % Generate binaural features using the generated training signals. If 
 % corresponding signals have already been generated, the auralization is
@@ -85,7 +85,7 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
         % training configuration file.
         for azimuth = -180 : azimuthIncrement : 180 - azimuthIncrement
             % Update progress bar.
-            display.progressBar( false, 'Extracting features', ...
+            display.progressBar( false, 'Extracting features...', ...
                 loopCounter, numLoops );
             loopCounter = loopCounter + 1;
             
