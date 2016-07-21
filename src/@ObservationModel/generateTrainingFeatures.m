@@ -107,11 +107,23 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
                         diffuseNoiseSignal, mctLevel{:} );
                 end
                 
-                % Perform feature extraction.
+                % Perform feature extraction and get all binaural cues
+                % available.
                 managerObj.processSignal( earSignals );
-                itds = dataObj.itd{1}.Data(:);
-                ilds = dataObj.ild{1}.Data(:);
-                ic = dataObj.ic{1}.Data(:);                
+                
+                % Assemble data structure to save features.
+                features.itds = dataObj.itd{1}.Data(:);
+                features.ilds = dataObj.ild{1}.Data(:);
+                features.ic = dataObj.ic{1}.Data(:);
+                features.impulseResponses = irName;
+                features.azimuth = azimuth;
+                features.mctLevel = mctLevel{:};
+                features.filterbank = dataObj.filterbank{1}.Name;
+                features.centerFrequencies = dataObj.filterbank{1}.cfHz;
+                
+                % Save extracted features as *.mat-file.
+                save( fullfile(obj.featurePath, fileName), 'features', ...
+                    '-v7.3' );                
             end
         end
     end
