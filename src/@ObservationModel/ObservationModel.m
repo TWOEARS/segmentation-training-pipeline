@@ -28,11 +28,8 @@ classdef ObservationModel
     %   along with this program. If not, see <http://www.gnu.org/licenses/>    
     
     properties ( GetAccess = public, SetAccess = private )
-        modelOrder              % Order of the regression model.
-        regressionCoeffs        % Coefficients of the regression functions,
-                                % represented as a [2xM+1] matrix, where M
-                                % is the model order.
-        noiseCovariance         % [2x2] noise covariance matrix.
+        modelParameters         % Model parameters for all center 
+                                % frequencies.
     end
     
     properties ( Access = private )
@@ -64,6 +61,8 @@ classdef ObservationModel
         
         noisySignal = addDiffuseNoise( earSignals, diffuseNoiseSignal, ...
             desiredSNR)
+        
+        dataMatrix = computeDataMatrix( azimuth, modelOrder )
     end
     
     methods ( Access = public )
@@ -114,28 +113,21 @@ classdef ObservationModel
             % model parameters.
             if exist( obj.modelPath, 'file' )
                 file = load( obj.modelPath );
-                
-                % TODO: Read parameters here.
+                modelParameters = file.modelParameters;
             else
-                obj.train();
+                % Run training, assign model parameters and save to file.
+                modelParameters = obj.train();                
+                save( obj.modelPath, 'modelParameters', '-v7.3' );
             end
-        end
-        
-        function train( obj )
-            % TRAIN Runs model training according to the specified training
-            %   parameters.
             
-            % Run data generation scripts to create training files. If
-            % files matching the current parameters have already been
-            % created, the data generation steps will be skipped.
-            obj.generateTrainingSignals();
-            obj.generateTrainingFeatures();
+            % Assign parameters to class properties.
+            obj.modelParameters = modelParameters;
         end
     end
     
     methods ( Access = private )
         generateTrainingSignals( obj )
         
-        generateTrainingFeatures( obj )
+        [itds, ilds, targetAzimuths] = generateTrainingFeatures( obj )
     end
 end

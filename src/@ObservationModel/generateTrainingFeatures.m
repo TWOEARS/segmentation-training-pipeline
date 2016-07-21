@@ -1,8 +1,17 @@
-function generateTrainingFeatures( obj )
+function [itds, ilds, targetAzimuths] = generateTrainingFeatures( obj )
 % GENERATETRAININGFEATURES This function generates binaural features to be
 %   used for training, according to the specified training parameters. The
 %   features are stored as *.mat-files in the data directory of the
 %   Two!Ears framework.
+%
+% OUTPUTS:
+%   itds                            - Matrix of interaurl-time-differences
+%                                     to be used for training.
+%   ilds                            - Matrix of
+%                                     interaural-level-differences to be
+%                                     used for training.
+%   targetAzimuths                  - Vector of corresponding target
+%                                     azimuth values in radians.
 %
 % AUTHOR:
 %   Copyright (c) 2016      Christopher Schymura
@@ -62,6 +71,17 @@ else
 end
 loopCounter = 1;
 
+% Initialize matrices for accumulating features and target azimuths. These
+% matrices can get quite big, so they are pre-allocated here. 
+overlap = obj.trainingParameters.features.win_size - ...
+    obj.trainingParameters.features.hop_size;
+numFrames = ceil( (1 - overlap) / overlap );
+numChannels = obj.trainingParameters.features.fb_num_channels;
+
+itds = zeros( numLoops * numFrames, numChannels );
+ilds = zeros( numLoops * numFrames, numChannels );
+targetAzimuths = zeros( numLoops * numFrames, 1 );
+
 % Initialize the progress bar.
 display.progressBar( true, 'Extracting features...' );
 
@@ -87,7 +107,6 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
             % Update progress bar.
             display.progressBar( false, 'Extracting features...', ...
                 loopCounter, numLoops );
-            loopCounter = loopCounter + 1;
             
             % Get feature file name.
             fileName = obj.getFeatureFileName( irName, azimuth, mctLevel{:} );
@@ -123,8 +142,23 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
                 
                 % Save extracted features as *.mat-file.
                 save( fullfile(obj.featurePath, fileName), 'features', ...
-                    '-v7.3' );                
+                    '-v7.3' );
+            else
+                % Load generated feature file.
+                file = load( fullfile(obj.featurePath, fileName) );
+                features = file.features;
             end
+            
+            % Accumulate features. Azimuths are converted from degrees to
+            % radians here, to comply with the model.
+            startIdx = (loopCounter - 1) * numFrames + 1;
+            endIdx = startIdx + numFrames - 1;
+            itds( startIdx : endIdx, : ) = features.itds;
+            ilds( startIdx : endIdx, : ) = features.ilds;
+            targetAzimuths( startIdx : endIdx ) = ...
+                repmat( features.azimuth, numFrames, 1 ) ./ 180 .* pi;
+            
+            loopCounter = loopCounter + 1;            
         end
     end
 end
