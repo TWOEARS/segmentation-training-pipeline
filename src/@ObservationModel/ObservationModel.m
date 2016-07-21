@@ -43,6 +43,8 @@ classdef ObservationModel
                                 % be stored.
         featurePath             % Path where all training features will be 
                                 % stored.
+        modelPath               % Path where all trained models will be 
+                                % stored.
         trainingParameters      % Struct-variable, containing all
                                 % parameters used for training.
         trainingLog             % Struct-variable, containing all 
@@ -90,21 +92,26 @@ classdef ObservationModel
                 'SegmentationKS' );
             
             % Initialize all additional paths for storing temporary data
-            % used for training.
-            obj.signalPath = fullfile( obj.basePath, 'train_signals' );
-            
+            % used for training. Parameter-depended files will be
+            % associated with a unique hash-identifier and stored in
+            % dedicated subfolders named as the hash-value.
             featureHash = DataHash( obj.trainingParameters.simulator, ...
                 obj.trainingParameters.features );
+            obj.signalPath = fullfile( obj.basePath, 'train_signals' );
             obj.featurePath = fullfile( obj.basePath, 'train_features', ...
                 featureHash);
-            
-            obj.generateTrainingSignals();
-            obj.generateTrainingFeatures();
+            obj.modelPath = fullfile( obj.basePath, 'models', featureHash);
         end
         
         function train( obj )
             % TRAIN Runs model training according to the specified training
             %   parameters.
+            
+            % Run data generation scripts to create training files. If
+            % files matching the current parameters have already been
+            % created, the data generation steps will be skipped.
+            obj.generateTrainingSignals();
+            obj.generateTrainingFeatures();
         end
     end
     
