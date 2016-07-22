@@ -128,6 +128,6 @@ classdef ObservationModel
     methods ( Access = private )
         generateTrainingSignals( obj )
         
-        [itds, ilds, targetAzimuths] = generateTrainingFeatures( obj )
+        [itds, ilds, targetAzimuths, centerFrequencies] = generateTrainingFeatures( obj )
     end
 end

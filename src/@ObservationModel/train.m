@@ -31,7 +31,11 @@ function modelParameters = train( obj )
 % the current parameters have already been created, the data generation 
 % steps will be skipped.
 obj.generateTrainingSignals();
-[itds, ilds, targetAzimuths] = obj.generateTrainingFeatures();
+[itds, ilds, targetAzimuths, centerFrequencies] = obj.generateTrainingFeatures();
+
+% Get unique target azimuth angles.
+uniqueAzimuths = unique( targetAzimuths );
+numUniqueAzimuths = length( uniqueAzimuths );
 
 display.sectionHeader( 'ObservationModel::Training::Regression' );
 display.progressBar( true, 'Training models...' );
@@ -50,13 +54,37 @@ for channelIdx = 1 : numChannels
     % Get binaural features for current channel and perform regression
     % model training.
     binauralFeatures = [itds( :, channelIdx ), ilds( :, channelIdx )];
-    [beta, sigma, ~, ~, logLikelihood] = mvregress( dataMatrix, ...
+    [beta, sigma, residuals, ~, logLikelihood] = mvregress( dataMatrix, ...
         binauralFeatures );
+    
+    % Accumulate statistics for all azimuth angles.
+    measuredItdMean = zeros( numUniqueAzimuths, 1 );
+    measuredItdStd = zeros( numUniqueAzimuths, 1 );
+    measuredIldMean = zeros( numUniqueAzimuths, 1 );
+    measuredIldStd = zeros( numUniqueAzimuths, 1 );
+    for azimuthIdx = 1 : numUniqueAzimuths
+        % Get corresponding binaural features for current azimuth.
+        idx = ( targetAzimuths == uniqueAzimuths(azimuthIdx) );
+        featureSubset = binauralFeatures( idx, : );
+        
+        measuredItdMean( azimuthIdx ) = mean( featureSubset(:, 1) );
+        measuredItdStd( azimuthIdx ) = std( featureSubset(:, 1) );
+        measuredIldMean( azimuthIdx ) = mean( featureSubset(:, 2) );
+        measuredIldStd( azimuthIdx ) = std( featureSubset(:, 2) );
+    end
     
     % Assemble model parameters.
     modelParameters( channelIdx ).beta = beta;
     modelParameters( channelIdx ).sigma = sigma;
     modelParameters( channelIdx ).logLikelihood = logLikelihood;
+    modelParameters( channelIdx ).rmseITD = sqrt( mean(residuals(:, 1).^2) );
+    modelParameters( channelIdx ).rmseILD = sqrt( mean(residuals(:, 2).^2) );
+    modelParameters( channelIdx ).centerFrequency = centerFrequencies( channelIdx );
+    modelParameters( channelIdx ).measuredItdMean = measuredItdMean;
+    modelParameters( channelIdx ).measuredItdStd = measuredItdStd;
+    modelParameters( channelIdx ).measuredIldMean = measuredIldMean;
+    modelParameters( channelIdx ).measuredIldStd = measuredIldStd;
+    modelParameters( channelIdx ).uniqueAzimuths = uniqueAzimuths;
 end
 
 display.sectionFooter();

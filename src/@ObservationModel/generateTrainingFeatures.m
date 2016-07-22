@@ -1,4 +1,5 @@
-function [itds, ilds, targetAzimuths] = generateTrainingFeatures( obj )
+function [itds, ilds, targetAzimuths, centerFrequencies] = ...
+    generateTrainingFeatures( obj )
 % GENERATETRAININGFEATURES This function generates binaural features to be
 %   used for training, according to the specified training parameters. The
 %   features are stored as *.mat-files in the data directory of the
@@ -12,6 +13,8 @@ function [itds, ilds, targetAzimuths] = generateTrainingFeatures( obj )
 %                                     used for training.
 %   targetAzimuths                  - Vector of corresponding target
 %                                     azimuth values in radians.
+%   centerFrequencies               - Center frequencies of the filterbank
+%                                     in Hz.
 %
 % AUTHOR:
 %   Copyright (c) 2016      Christopher Schymura
@@ -49,8 +52,9 @@ end
 azimuthIncrement = max( ...
     round(obj.trainingParameters.simulator.azimuth_increment), 1 );
 
-% Initialize the Auditory Front-End.
+% Initialize the Auditory Front-End and get center frequencies.
 [dataObj, managerObj] = tools.setupAuditoryFrontend( obj.trainingParameters );
+centerFrequencies = dataObj.filterbank{1}.cfHz;
 
 % Get total number of loops for displaying the progress bar and initialize
 % the loop counter. This if-clause is additionally used to initialize the
