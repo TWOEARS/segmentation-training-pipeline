@@ -25,14 +25,8 @@ classdef SegmentationTrainer < handle
     %   along with this program. If not, see <http://www.gnu.org/licenses/>
     
     properties ( GetAccess = public, SetAccess = private )
-        trainingParameters      % Struct-variable, containing all
-                                % parameters used for training.
-    end
-    
-    properties ( Access = private )
-        parameterHash           % Hash-value that serves as a unique 
-                                % identifier for a specific set of training
-                                % parameters.
+        models                  % List of trained models according to the
+                                % specified config-files.
     end
     
     methods ( Static, Hidden )
@@ -40,7 +34,7 @@ classdef SegmentationTrainer < handle
     end
     
     methods ( Access = public )
-        function obj = SegmentationTrainer( configFile )
+        function obj = SegmentationTrainer( varargin )
             % SEGMENTATIONTRAINER The class constructor is used to set all
             %   parameters desired for training. A parameter set is
             %   provided via a configuration file in *.yaml-format. Please
@@ -48,22 +42,30 @@ classdef SegmentationTrainer < handle
             %   details.
             %
             % REQUIRED INPUTS:
-            %   configFile          - Configuration file in *.yaml-format.
+            %   [configFile1, configFile2, ...] - Configuration files 
+            %                                     in *.yaml-format.
                         
-            % Check input arguments.
-            p = inputParser();
-            p.addRequired( 'ConfigFile', @(x) exist(x, 'file') );
-            p.parse( configFile );
-            
             % Automatically download all external toolboxes that are needed
             % for training the SegmentationKS.
             obj.downloadExternalLibraries();
             
-            % Read configuration file and get all contained parameters.
-            obj.trainingParameters = ReadYaml( p.Results.ConfigFile );
+            % Loop over all configuration files that should be processed.
+            obj.models = cell( nargin, 1 );
             
-            % Compute parameter hash for current settings.
-            obj.parameterHash = DataHash( obj.trainingParameters );
+            for fileIdx = 1 : nargin
+                % Check if file exists.
+                if exist( varargin{fileIdx}, 'file' )
+                    % Read configuration file and get all contained 
+                    % parameters.
+                    trainingParameters = ReadYaml( varargin{fileIdx} );
+                    
+                    % Train/load corresponding observation model.
+                    obj.models{fileIdx} = ObservationModel( trainingParameters );
+                else
+                    error( 'SegmentationTrainer:SegmentationTrainer:FileNotFound', ...
+                        ['The file ', varargin{fileIdx}, ' does not exist.'] );
+                end
+            end
         end
     end    
 end
