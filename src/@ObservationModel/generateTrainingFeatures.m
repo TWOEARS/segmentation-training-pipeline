@@ -79,7 +79,8 @@ loopCounter = 1;
 % matrices can get quite big, so they are pre-allocated here. 
 overlap = obj.trainingParameters.features.win_size - ...
     obj.trainingParameters.features.hop_size;
-numFrames = ceil( (1 - overlap) / overlap );
+numFrames = floor( (1 - overlap) / ...
+    (obj.trainingParameters.features.win_size - overlap) );
 numChannels = obj.trainingParameters.features.fb_num_channels;
 
 itds = zeros( numLoops * numFrames, numChannels );

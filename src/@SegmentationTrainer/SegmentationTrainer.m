@@ -29,8 +29,8 @@ classdef SegmentationTrainer < handle
                                 % specified config-files.
     end
     
-    methods ( Static, Hidden )
-        downloadExternalLibraries()
+    properties ( Access = private )
+        configFiles             % List of config file names.
     end
     
     methods ( Access = public )
@@ -51,6 +51,7 @@ classdef SegmentationTrainer < handle
             
             % Loop over all configuration files that should be processed.
             obj.models = cell( nargin, 1 );
+            obj.configFiles = cell( nargin, 1 );
             
             for fileIdx = 1 : nargin
                 % Check if file exists.
@@ -58,6 +59,9 @@ classdef SegmentationTrainer < handle
                     % Read configuration file and get all contained 
                     % parameters.
                     trainingParameters = ReadYaml( varargin{fileIdx} );
+                    
+                    % Append config file name to class properties.
+                    [~, obj.configFiles{fileIdx}] = fileparts( varargin{fileIdx} );
                     
                     % Train/load corresponding observation model.
                     obj.models{fileIdx} = ObservationModel( trainingParameters );
@@ -67,5 +71,7 @@ classdef SegmentationTrainer < handle
                 end
             end
         end
+        
+        showTrainingResults( obj )
     end    
 end

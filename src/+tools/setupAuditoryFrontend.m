@@ -1,4 +1,5 @@
-function [dataObj, managerObj] = setupAuditoryFrontend( trainingParameters )
+function [dataObj, managerObj, requests, afeParameters] = ...
+    setupAuditoryFrontend( trainingParameters )
 % SETUPAUDITORYFRONTEND This function initializes a data and a manager
 %   object of the Two!Ears Auditory Front-End for a given set of training
 %   parameters.

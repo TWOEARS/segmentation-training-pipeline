@@ -27,8 +27,7 @@ function downloadExternalLibraries()
 
 % Get base path to working directory
 basePath = fileparts( mfilename('fullpath') );
-pathToExternalLibraries = ...
-    fullfile( basePath(1 : strfind(basePath, '@') - 1), '..', 'external' );
+pathToExternalLibraries = fullfile( basePath, '..', 'external' );
 
 % Import helper functions for console output
 import display.*

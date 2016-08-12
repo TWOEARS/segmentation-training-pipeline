@@ -21,13 +21,13 @@ simulator:
 features:
   normalize_rms: true                # Apply RMS normalization before 
                                      # feature extraction?
-  win_size: 0.02                     # Window size in seconds.
+  win_size: 0.025                    # Window size in seconds.
   hop_size: 0.01                     # Hop size in seconds.
   filterbank: gammatone              # Type of filterbank to be used, 
                                      # either 'gammatone' or 'drnl'.
   fb_num_channels: 32                # Number of filterbank channels.
-  fb_low_freq: 50                    # Lowest center frequency in Hz.
-  fb_high_freq: 8000                 # Highest center frequency in Hz.
+  fb_low_freq: 80                    # Lowest center frequency in Hz.
+  fb_high_freq: 5000                 # Highest center frequency in Hz.
   use_middle_ear_filter: true        # Apply middle ear filter?
   middle_ear_model: jepsen           # Middle ear model type.
   ihc_model: dau                     # Inner hair cell model type.
@@ -38,5 +38,5 @@ features:
 # Settings for model training
 # =========================================================================
 models:
-  model_order: 13                    # Order of the regression function.
+  model_order: 15                    # Order of the regression function.
   regularization_factor: 0           # Use regularization?

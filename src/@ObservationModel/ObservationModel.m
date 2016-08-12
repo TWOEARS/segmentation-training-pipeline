@@ -30,6 +30,8 @@ classdef ObservationModel
     properties ( GetAccess = public, SetAccess = private )
         modelParameters         % Model parameters for all center 
                                 % frequencies.
+        trainingParameters      % Struct-variable, containing all
+                                % parameters used for training.                                
     end
     
     properties ( Access = private )
@@ -42,8 +44,6 @@ classdef ObservationModel
                                 % stored.
         modelPath               % Path where all trained models will be 
                                 % stored.
-        trainingParameters      % Struct-variable, containing all
-                                % parameters used for training.
         trainingLog             % Struct-variable, containing all 
                                 % information gathered during training. It
                                 % contains the fields 'logLikelihood',
@@ -123,6 +123,8 @@ classdef ObservationModel
             % Assign parameters to class properties.
             obj.modelParameters = modelParameters;
         end
+        
+        likelihood = computeLikelihood( obj, itds, ilds, azimuth );
     end
     
     methods ( Access = private )
