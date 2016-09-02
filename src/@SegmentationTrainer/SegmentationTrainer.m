@@ -47,7 +47,7 @@ classdef SegmentationTrainer < handle
                         
             % Automatically download all external toolboxes that are needed
             % for training the SegmentationKS.
-            obj.downloadExternalLibraries();
+            downloadExternalLibraries();
             
             % Loop over all configuration files that should be processed.
             obj.models = cell( nargin, 1 );
