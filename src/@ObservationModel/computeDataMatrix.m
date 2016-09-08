@@ -39,13 +39,9 @@ function dataMatrix = computeDataMatrix( azimuth, modelOrder )
 %   along with this program. If not, see <http://www.gnu.org/licenses/>
 
 % Check input arguments.
-p = inputParser();
 
-p.addRequired( 'Azimuth', @(x) validateattributes(x, {'numeric'}, ...
-    {'real', '>=', -pi, '<=', pi, 'vector'}) );
-p.addRequired( 'ModelOrder', @(x) validateattributes(x, {'numeric'}, ...
-    {'integer', 'scalar', 'odd', 'positive'}) );
-p.parse( azimuth, modelOrder );
+validateattributes( azimuth, {'numeric'}, {'real', '>=', -pi, '<=', pi, 'vector'} );
+validateattributes( modelOrder, {'numeric'}, {'integer', 'scalar', 'odd', 'positive'} );
 
 % Compute maximum number of iterations which satisfies the model order
 % specifications and initialize data matrix. The first column of the matrix
