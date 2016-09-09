@@ -37,7 +37,7 @@ p.parse( trainingParameters );
 
 % Initialize cell-array of requests. Only binaural cues are needed to train
 % models for the SegmentationKS.
-requests = {'itd', 'ild', 'ic'};
+requests = {'itd', 'ild'};
 
 % Generate Two!Ears Auditory-Front-End parameter structure.
 afeParameters = genParStruct( ...
