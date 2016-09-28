@@ -123,13 +123,21 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
                 % Load corresponding audio file and (optionally) add diffuse
                 % noise. The spatialized binaural signals are also truncated to
                 % a fixed length of one second here.
-                earSignals = audioread( fullfile(obj.signalPath, dataFileName) );
+                [earSignals, signalSamplingRate] = ...
+                    audioread( fullfile(obj.signalPath, dataFileName) );
                 earSignals = earSignals( 1 : obj.trainingParameters.simulator.fs, : );
                 
                 if ~(ischar( mctLevel{:} ) && strcmpi( mctLevel{:}, 'inf' ))
                     earSignals = obj.addDiffuseNoise( earSignals, ...
                         diffuseNoiseSignal, mctLevel{:} );
                 end
+                
+                % Resample ear signals.
+                earSignals = [ ...
+                    resample( earSignals(:, 1), ...
+                    obj.trainingParameters.simulator.fs, signalSamplingRate ), ...
+                    resample( earSignals(:, 2), ...
+                    obj.trainingParameters.simulator.fs, signalSamplingRate )];
                 
                 % Perform feature extraction and get all binaural cues
                 % available.

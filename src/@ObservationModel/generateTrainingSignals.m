@@ -89,15 +89,7 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
     
     % Check if specified sampling rate matches the sampling rate of the
     % impulse responses.
-    if obj.trainingParameters.simulator.fs ~= sim.HRIRDataset.SampleRate
-        error( 'ObservationModel:generateTrainingData:samplingRateMismatch', ...
-            ['The specified sampling rate (', ...
-            num2str(obj.trainingParameters.simulator.fs), ') does not ', ...
-            'match the sampling rate of the impulse response set (', ...
-            num2str(sim.HRIRDataset.SampleRate), ').']);
-    else
-        sim.set( 'SampleRate', obj.trainingParameters.simulator.fs );
-    end
+    sim.set( 'SampleRate', sim.HRIRDataset.SampleRate );
     
     % Initialize diffuse noise signal for current set of impulse responses.
     diffuseNoiseSignal = zeros( sim.SampleRate, 2 );    
