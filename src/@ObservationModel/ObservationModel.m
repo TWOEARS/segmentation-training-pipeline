@@ -87,7 +87,7 @@ classdef ObservationModel
             
             % Get base path where all feature extraction-related files
             % should be stored.
-            obj.basePath = fullfile( xml.dbTmp, 'learned_models', ...
+            obj.basePath = fullfile( db.tmp, 'learned_models', ...
                 'SegmentationKS' );
             
             % Initialize all additional paths for storing temporary data
