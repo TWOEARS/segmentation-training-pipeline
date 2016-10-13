@@ -79,8 +79,8 @@ loopCounter = 1;
 % matrices can get quite big, so they are pre-allocated here. 
 overlap = obj.trainingParameters.features.win_size - ...
     obj.trainingParameters.features.hop_size;
-numFrames = floor( (1 - overlap) / ...
-    (obj.trainingParameters.features.win_size - overlap) );
+numFrames = floor( (1 - overlap) / obj.trainingParameters.features.hop_size );
+
 numChannels = obj.trainingParameters.features.fb_num_channels;
 
 itds = zeros( numLoops * numFrames, numChannels );
@@ -125,7 +125,7 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
                 % a fixed length of one second here.
                 [earSignals, signalSamplingRate] = ...
                     audioread( fullfile(obj.signalPath, dataFileName) );
-                earSignals = earSignals( 1 : obj.trainingParameters.simulator.fs, : );
+                earSignals = earSignals( 1 : signalSamplingRate, : );
                 
                 if ~(ischar( mctLevel{:} ) && strcmpi( mctLevel{:}, 'inf' ))
                     earSignals = obj.addDiffuseNoise( earSignals, ...
@@ -146,7 +146,6 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
                 % Assemble data structure to save features.
                 features.itds = dataObj.itd{1}.Data(:);
                 features.ilds = dataObj.ild{1}.Data(:);
-                features.ic = dataObj.ic{1}.Data(:);
                 features.impulseResponses = irName;
                 features.azimuth = azimuth;
                 features.mctLevel = mctLevel{:};
