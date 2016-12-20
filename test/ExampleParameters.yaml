@@ -23,7 +23,8 @@ features:
                                      # feature extraction?
   win_size: 0.025                    # Window size in seconds.
   hop_size: 0.01                     # Hop size in seconds.
-  filterbank: gammatone              # Type of filterbank to be used, 
+  cc_maxDelaySec: 0.0011             # cross-correlation max. delay
+  filterbank: gammatone              # Type of filterbank to be used,
                                      # either 'gammatone' or 'drnl'.
   fb_num_channels: 32                # Number of filterbank channels.
   fb_low_freq: 80                    # Lowest center frequency in Hz.
