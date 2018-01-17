@@ -39,39 +39,47 @@ function likelihood = computeLikelihood( obj, itds, ilds, azimuth )
 %   along with this program. If not, see <http://www.gnu.org/licenses/>
 
 % Check input arguments.
-p = inputParser();
-
-p.addRequired( 'Itds', @(x) validateattributes(x, {'numeric'}, ...
-    {'real', '2d'}) );
-p.addRequired( 'Ilds', @(x) validateattributes(x, {'numeric'}, ...
-    {'real', '2d'}) );
-p.addRequired( 'Azimuth', @(x) validateattributes(x, {'numeric'}, ...
-    {'real', '>=', -pi, '<=', pi, 'vector'}) );
-p.parse( itds, ilds, azimuth );
+try
+    validateattributes( itds, {'numeric'}, {'real', '2d'} );
+catch ME
+    error( 'ObservationModel.computeLikelihood needs numeric real 2d input for itds.' );
+end
+try
+    validateattributes( ilds, {'numeric'}, {'real', '2d'} )
+catch ME
+    error( 'ObservationModel.computeLikelihood needs numeric real 2d input for ilds.' );
+end
+try
+    validateattributes( azimuth, {'numeric'}, {'real', '>=', -pi, '<=', pi, 'vector'} )
+catch ME
+    error( 'ObservationModel.computeLikelihood needs numeric real input between -pi and pi for azimuth.' );
+end
 
 % Check if sizes of binaural features match.
-if any( size(p.Results.Itds) ~= size(p.Results.Ilds) )
+if any( size( itds ) ~= size( ilds ) )
     error('Dimensions of binaural features do not match.');
 end
 
 % Get number of channels.
-[~, numChannels] = size( p.Results.Itds );
+[numSamples,numChannels] = size( itds );
 
 % Initialize likelihoods.
-likelihood = zeros( size(p.Results.Itds) );
+likelihood = zeros( numSamples, numChannels, numel( azimuth ) );
 
+binauralFeatures = permute( cat( 3, itds, ilds ), [1,3,2] );
+
+dm = obj.computeDataMatrix( azimuth, ...
+                            obj.trainingParameters.models.model_order );
 for channelIdx = 1 : numChannels
-    % Get binaural feature vector for current channel.
-    binauralFeatures = [itds(:, channelIdx), ilds(:, channelIdx)];
-    
     % Compute model predicition.
-    modelPrediction = obj.computeDataMatrix( p.Results.Azimuth, ...
-        obj.trainingParameters.models.model_order ) * ...
-        obj.modelParameters(channelIdx).beta;
+    modelPrediction = dm * obj.modelParameters(channelIdx).beta;
     
     % Get likelihood.
-    likelihood(:, channelIdx) = mvnpdf( binauralFeatures, modelPrediction, ...
-        obj.modelParameters(channelIdx).sigma );
+    for azimuthIdx = 1 : numel( azimuth )
+        likelihood(:,channelIdx,azimuthIdx) = mvnpdf( ...
+                   binauralFeatures(:,:,channelIdx), ...
+                   modelPrediction(azimuthIdx,:), obj.modelParameters(channelIdx).sigma );
+    end
 end
 
 end
