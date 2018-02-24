@@ -48,12 +48,9 @@ validateattributes( modelOrder, {'numeric'}, {'integer', 'scalar', 'odd', 'posit
 % represents the 0-th order terms and is hence initialized with "1".
 numSamples = length( azimuth );
 maxIter = ( modelOrder + 1 ) / 2;
-dataMatrix = zeros( numSamples, maxIter + 1 );
-dataMatrix( :, 1 ) = ones( numSamples, 1 );
 
 % Assemble data matrix.
-for idx = 1 : maxIter
-    dataMatrix( :, idx + 1 ) = sin( (2 * idx - 1) .* azimuth(:) );
-end
+idx = 1 : maxIter;
+dataMatrix = cat( 2, ones( numSamples, 1 ), sin( (2 * idx - 1)' * azimuth(:)' )' );
 
 end
