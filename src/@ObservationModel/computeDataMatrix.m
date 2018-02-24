@@ -51,6 +51,6 @@ maxIter = ( modelOrder + 1 ) / 2;
 
 % Assemble data matrix.
 idx = 1 : maxIter;
-dataMatrix = cat( 2, ones( numSamples, 1 ), sin( (2 * idx - 1)' * azimuth(:)' )' );
+dataMatrix = cat( 2, ones( numSamples, 1 ), sin( azimuth(:) * (2 * idx - 1) ) );
 
 end
