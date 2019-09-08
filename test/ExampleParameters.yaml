@@ -2,6 +2,7 @@
 # Binaural Simulator settings
 # =========================================================================
 simulator:
+  sim: ssr_binaural                  # simulator backend
   fs: 44100                          # Sampling frequency used for
                                      # auralization of acoustic scenes.
   step_size: 2048                    # Step-size in samples.

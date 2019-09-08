@@ -49,7 +49,12 @@ signalEnergy = std( p.Results.EarSignals(:) );
 noiseEnergy = std( p.Results.DiffuseNoiseSignal(:) );
 noiseGain = (signalEnergy / noiseEnergy) * 10^(-p.Results.DesiredSNR / 20);
 
+lenrat = size( diffuseNoiseSignal, 1 ) / size( earSignals, 1 );
+if lenrat < 1
+    diffuseNoiseSignal = repmat( diffuseNoiseSignal, ceil( 1/lenrat ), 1 );
+    diffuseNoiseSignal(size( earSignals, 1 )+1:end,:) = [];
+end
 % Compute resulting noisy signal.
-noisySignal = p.Results.EarSignals + noiseGain .* p.Results.DiffuseNoiseSignal;
+noisySignal = earSignals + noiseGain .* diffuseNoiseSignal;
 
 end

@@ -46,12 +46,6 @@ if ~exist( obj.featurePath, 'dir' )
     mkdir( obj.featurePath );
 end
 
-% Get azimuth increment from training parameters. To simplify the data
-% generation, the azimuth increment is forced to be a whole number. Real
-% numbers will be automatically rounded towards the nearest integer.
-azimuthIncrement = max( ...
-    round(obj.trainingParameters.simulator.azimuth_increment), 1 );
-
 % Initialize the Auditory Front-End and get center frequencies.
 [dataObj, managerObj] = tools.setupAuditoryFrontend( obj.trainingParameters );
 centerFrequencies = dataObj.filterbank{1}.cfHz;
@@ -63,15 +57,12 @@ if obj.trainingParameters.features.use_mct
     % Get desired MCT levels.
     mctLevels = obj.trainingParameters.features.mct_levels;
     numLevels = length( mctLevels );
-    
-    numLoops = length( obj.trainingParameters.simulator.impulse_responses ) * ...
-        ( 360 / azimuthIncrement ) * numLevels;
+    numLoops = length( obj.trainingParameters.simulator.impulse_responses ) * 100 * numLevels;
 else
     % Set MCT levels to 'Inf' only.
     mctLevels = {'Inf'};
     
-    numLoops = length( obj.trainingParameters.simulator.impulse_responses ) * ...
-        ( 360 / azimuthIncrement );
+    numLoops = length( obj.trainingParameters.simulator.impulse_responses ) * 100;
 end
 loopCounter = 1;
 
@@ -79,13 +70,12 @@ loopCounter = 1;
 % matrices can get quite big, so they are pre-allocated here. 
 overlap = obj.trainingParameters.features.win_size - ...
     obj.trainingParameters.features.hop_size;
-numFrames = floor( (1 - overlap) / obj.trainingParameters.features.hop_size );
-
+numFrames = floor( (5 - overlap) / obj.trainingParameters.features.hop_size );
 numChannels = obj.trainingParameters.features.fb_num_channels;
 
-itds = zeros( numLoops * numFrames, numChannels );
-ilds = zeros( numLoops * numFrames, numChannels );
-targetAzimuths = zeros( numLoops * numFrames, 1 );
+itds = cell( numel( obj.trainingParameters.simulator.impulse_responses ), 1 );
+ilds = cell( numel( obj.trainingParameters.simulator.impulse_responses ), 1 );
+targetAzimuths = cell( numel( obj.trainingParameters.simulator.impulse_responses ), 1 );
 
 % Initialize the progress bar.
 display.progressBar( true, 'Extracting features...' );
@@ -93,39 +83,63 @@ display.progressBar( true, 'Extracting features...' );
 % Generate binaural features using the generated training signals. If 
 % corresponding signals have already been generated, the auralization is
 % skipped automatically.
+iridx = 0;
 for irSet = obj.trainingParameters.simulator.impulse_responses
+    iridx = iridx + 1;
     % Get name of impulse response set.
     [~, irName] = fileparts( irSet{:} );
+    
+    % determine available azimuths
+    warning( 'off', 'all' );
+    brirFile = db.getFile( irSet{:} );
+    srcPosition = sofa.getLoudspeakerPositions(brirFile, 1, 'cartesian');
+    listenerPosition = sofa.getListenerPositions(brirFile, 1, 'cartesian');
+    brirSrcOrientation = SOFAconvertCoordinates(...
+        srcPosition - listenerPosition, 'cartesian', 'spherical');
+    [~, listenerIdxs] = sofa.getListenerPositions(brirFile, 1, 'cartesian');
+    availableHeadOrientations = sofa.getHeadOrientations(brirFile, listenerIdxs);
+    availableHeadOrientations = wrapTo360( availableHeadOrientations );
+    availableAzimuths = wrapTo180( brirSrcOrientation(1) - availableHeadOrientations );
+    warning( 'on', 'all' );
+
+    N = numel( availableAzimuths ) * numel( mctLevels );
+    itds{iridx} = zeros( N * numFrames, numChannels );
+    ilds{iridx} = zeros( N * numFrames, numChannels );
+    targetAzimuths{iridx} = zeros( N * numFrames, 1 );
+    curIdx = 1;
+    
     for mctLevel = mctLevels
         % Check if multi-conditional training is necessary.
         if ~(ischar( mctLevel{:} ) && strcmpi( mctLevel{:}, 'inf' ))
-            % Load diffuse noise file for coresponding HRIR set.
+            % For the moment, always use diffuse noise from anechoic KEMAR
+            % 3m generation (diffuse noise should not be processed with
+            % reverberation, since this will make it directional again.
             diffuseNoiseSignal = audioread( fullfile(obj.signalPath, ...
-                [irName, '_diffuse.wav']) );
+                'QU_KEMAR_anechoic_3m_diffuse.wav' ) );
         end
         
         % Loop over all specified azimuth angles. All angles that are not
         % covered by the azimuth increment are skipped here. It is possible to
         % generate them later by changing the increment parameter in the
         % training configuration file.
-        for azimuth = -180 : azimuthIncrement : 180 - azimuthIncrement
+        for azimuth = availableAzimuths'
             % Update progress bar.
             display.progressBar( false, 'Extracting features...', ...
-                loopCounter, numLoops );
+                round( loopCounter ), numLoops );
             
             % Get feature file name.
-            fileName = obj.getFeatureFileName( irName, azimuth, mctLevel{:} );
+            fileName = obj.getFeatureFileName( irName, round( azimuth ), mctLevel{:} );
             
             if ~exist( fullfile(obj.featurePath, fileName), 'file' )                
                 % Get file name for current settings.
-                dataFileName = obj.getDataFileName( irName, azimuth );
+                dataFileName = obj.getDataFileName( irName, round( azimuth ) );
                 
                 % Load corresponding audio file and (optionally) add diffuse
                 % noise. The spatialized binaural signals are also truncated to
                 % a fixed length of one second here.
                 [earSignals, signalSamplingRate] = ...
                     audioread( fullfile(obj.signalPath, dataFileName) );
-                earSignals = earSignals( 1 : signalSamplingRate, : );
+%                 earSignals = earSignals( 1 : signalSamplingRate, : );
                 
                 if ~(ischar( mctLevel{:} ) && strcmpi( mctLevel{:}, 'inf' ))
                     earSignals = obj.addDiffuseNoise( earSignals, ...
@@ -163,17 +177,20 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
             
             % Accumulate features. Azimuths are converted from degrees to
             % radians here, to comply with the model.
-            startIdx = (loopCounter - 1) * numFrames + 1;
-            endIdx = startIdx + numFrames - 1;
-            itds( startIdx : endIdx, : ) = features.itds;
-            ilds( startIdx : endIdx, : ) = features.ilds;
-            targetAzimuths( startIdx : endIdx ) = ...
-                repmat( features.azimuth, numFrames, 1 ) ./ 180 .* pi;
+            itds{iridx}(curIdx:curIdx+numFrames-1,:) = features.itds;
+            ilds{iridx}(curIdx:curIdx+numFrames-1,:) = features.ilds;
+            targetAzimuths{iridx}(curIdx:curIdx+numFrames-1) = ...
+                repmat( features.azimuth ./ 180 .* pi, numFrames, 1 );
             
-            loopCounter = loopCounter + 1;            
+            loopCounter = loopCounter + 100 / numel( availableAzimuths );
+            curIdx = curIdx + numFrames;
         end
     end
 end
+
+itds = cat( 1, itds{:} );
+ilds = cat( 1, ilds{:} );
+targetAzimuths = cat( 1, targetAzimuths{:} );
 
 % Exit feature extraction framework.
 display.sectionFooter();

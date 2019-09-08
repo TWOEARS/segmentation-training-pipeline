@@ -78,7 +78,7 @@ afeParameters = genParStruct( ...
 % Initialize AFE manager and data objects. As some annoying warnings can
 % occur during intitialization, these are suppressed here.
 warning( 'off', 'all' );
-dataObj = dataObject( [], trainingParameters.simulator.fs, 1, 2 );
+dataObj = dataObject( [], trainingParameters.simulator.fs, 5, 2 );
 managerObj = manager(dataObj, requests, afeParameters);
 warning( 'on', 'all' );
 

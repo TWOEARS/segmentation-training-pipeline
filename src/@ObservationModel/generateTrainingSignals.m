@@ -47,11 +47,19 @@ display.subsection( 'Initializing binaural simulator...' );
 % will not change during data generation.
 sim = simulator.SimulatorConvexRoom();
 
+if strcmpi( obj.trainingParameters.simulator.sim, 'ssr_binaural' )
+    renderer = @ssr_binaural;
+elseif strcmpi( obj.trainingParameters.simulator.sim, 'ssr_brs' )
+    renderer = @ssr_brs;
+else
+    error( 'Unknown renderer chosen.' );
+end
+
 sim.set( ...
-    'Renderer', @ssr_binaural, ...  % Renderer for binaural HRIRs
+    'Renderer', renderer, ...  % Renderer for binaural HRIRs
     'MaximumDelay', 0.05, ...
     'PreDelay', 0.0, ...    
-    'LengthOfSimulation', 1, ...    % Fixed to one second here.
+    'LengthOfSimulation', 5, ...    % Fixed to five seconds here.
     'Sources', {simulator.source.Point()}, ...
     'Sinks', simulator.AudioSink(2), ...
     'Verbose', false );
@@ -65,14 +73,13 @@ sim.Sinks.set( ...
     'Position', [0; 0; 1.75], ...   % Cartesian position of the dummy head
     'Name', 'DummyHead' );          % Identifier of the audio sink.
 
-% Get total number of loops for displaying the progress bar and initialize
-% the loop counter.
-numLoops = length( obj.trainingParameters.simulator.impulse_responses ) * ...
-    ( 360 / azimuthIncrement );
-loopCounter = 1;
-
 % Initialize the progress bar.
 display.progressBar( true, 'Rendering signals...' );
+% Get total number of loops for displaying the progress bar and initialize
+% the loop counter.
+numLoops = length( obj.trainingParameters.simulator.impulse_responses ) * 100;
+loopCounter = 1;
+
 
 % Generate binaural signals using white noise stimuli for all specified
 % impulse responses. If corresponding signals have already been generated,
@@ -84,58 +91,70 @@ for irSet = obj.trainingParameters.simulator.impulse_responses
     % Add impulse response set to binaural simulator settings and suppress 
     % warnings that can occur during initialization.
     warning( 'off', 'all' );
-    sim.set( 'HRIRDataset', simulator.DirectionalIR(irSet{:}) );
-    warning( 'on', 'all' );
+    sim.Sources{1}.IRDataset = simulator.DirectionalIR( irSet{:}, 1 );
     
     % Check if specified sampling rate matches the sampling rate of the
     % impulse responses.
-    sim.set( 'SampleRate', sim.HRIRDataset.SampleRate );
-    
+    sim.set( 'SampleRate', sim.Sources{1}.IRDataset.SampleRate );
+
+    sim.init();
+
     % Initialize diffuse noise signal for current set of impulse responses.
     diffuseNoiseSignal = zeros( sim.SampleRate, 2 );    
     
+    % determine available azimuths
+    brirFile = db.getFile( irSet{:} );
+    srcPosition = sofa.getLoudspeakerPositions(brirFile, 1, 'cartesian');
+    listenerPosition = sofa.getListenerPositions(brirFile, 1, 'cartesian');
+    brirSrcOrientation = SOFAconvertCoordinates(...
+        srcPosition - listenerPosition, 'cartesian', 'spherical');
+    [~, listenerIdxs] = sofa.getListenerPositions(brirFile, 1, 'cartesian');
+    availableHeadOrientations = sofa.getHeadOrientations(brirFile, listenerIdxs);
+    availableHeadOrientations = wrapTo360( availableHeadOrientations );
+    availableAzimuths = wrapTo180( brirSrcOrientation(1) - availableHeadOrientations );
+    warning( 'on', 'all' );
+            
     % Loop over all specified azimuth angles. All angles that are not
     % covered by the azimuth increment are skipped here. It is possible to
     % generate them later by changing the increment parameter in the
     % training configuration file.
-    for azimuth = -180 : azimuthIncrement : 180 - azimuthIncrement
+    for azm_ho = [availableAzimuths,availableHeadOrientations]'
         % Get file name for current settings and check if file has already
         % been created. If not, the auralization process is started
         % automatically.
-        fileName = obj.getDataFileName( irName, azimuth );
+        fileName = obj.getDataFileName( irName, round( azm_ho(1) ) );
         
         % Update progress bar.
-        display.progressBar( false, 'Rendering signals...', loopCounter, numLoops );
-        loopCounter = loopCounter + 1;
+        display.progressBar( false, 'Rendering signals...', round( loopCounter ), numLoops );
+        loopCounter = loopCounter + 100 / numel( availableAzimuths );
         
         if ~exist( fullfile(obj.signalPath, fileName), 'file' )
-            % Set source position in binaural simulator and re-initialize
+            % Set head orientation in binaural simulator and re-initialize
             % the simulation framework.
-            sim.Sources{1}.set( ...
-                'Position', [cosd(azimuth); sind(azimuth); 1.75] );
+            [crp(1),crp(2)] = sim.getCurrentRobotPosition();
+            [~,~,brirTorsoDefault] = sim.Sources{1}.getHeadLimits();
+            sim.moveRobot( crp(1), crp(2), brirTorsoDefault, 'absolute' );
+            % 'absolute' mode means: relative wrt torso...
+            headToTorsoAzm = mod( azm_ho(2), 360 ) - mod( brirTorsoDefault, 360 );
+            sim.rotateHead( round( headToTorsoAzm ), 'absolute' );
             sim.init();
             
             % Get the processed ear signals, normalize to prevent clipping
             % and save them in a *.wav-file.
             earSignals = double( sim.getSignal() );
-            if max( abs(earSignals(:)) ) > 1
-                earSignals = earSignals ./ max( abs(earSignals(:)) );
-            end            
-            audiowrite( fullfile(obj.signalPath, fileName), earSignals, ...
-                sim.SampleRate );
-        else
+            earSignals = earSignals ./ max( abs(earSignals(:)) );
+            audiowrite( fullfile(obj.signalPath, fileName), earSignals, sim.SampleRate );
+        elseif ~exist( fullfile(obj.signalPath, [irName, '_diffuse.wav']), 'file' )
             % Read audio signal for computation of white noise signal.
             earSignals = audioread( fullfile(obj.signalPath, fileName) );
+            % Append current directional signal to diffuse noise signal.
+            diffuseNoiseSignal = diffuseNoiseSignal + earSignals( 1 : sim.SampleRate, : );
         end
-        
-        % Append current directional signal to diffuse noise signal.
-        diffuseNoiseSignal = diffuseNoiseSignal + ...
-            earSignals( 1 : sim.SampleRate, : );
     end
     
-    % Normalize diffuse noise signal and save it in separate file.
-    diffuseNoiseSignal = diffuseNoiseSignal ./ ( 360 / azimuthIncrement );
     if ~exist( fullfile(obj.signalPath, [irName, '_diffuse.wav']), 'file' )
+        % Normalize diffuse noise signal and save it in separate file.
+        diffuseNoiseSignal = diffuseNoiseSignal ./ numel( availableAzimuths );
         audiowrite( fullfile(obj.signalPath, [irName, '_diffuse.wav']), ...
             diffuseNoiseSignal, sim.SampleRate );
     end
